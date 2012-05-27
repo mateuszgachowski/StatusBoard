@@ -15,7 +15,7 @@ class StatusBoardApplication(tornado.web.Application):
     
     channels = set()
     workers = dict()
-    
+        
     @classmethod
     def add_listener(self, channel_name, channel_listener):
         """Registers a listener for the channel."""    
@@ -65,7 +65,7 @@ class Channel(btheventsource.BTHEventStreamHandler):
     @tornado.web.asynchronous
     def post(self):
         StatusBoardApplication.add_listener('events', self)
-            
+                
 # Routing table.
 default_routes = [
     (r'/', StatusBoard.handlers.IndexHandler),
@@ -104,6 +104,17 @@ def create_app(channels=None, config=None):
         )
     except KeyError:
         pass
+        
+    if config.get('theme', None):
+        try:
+            theme_path = os.path.join(config['themes_path'], config.get('theme'))
+            default_routes.append(
+                (r'/theme/(.+?)', StatusBoard.handlers.ThemeStaticFileHandler, { 'path': theme_path })
+            )
+        except KeyError:
+            raise RuntimeError('Cannot switch theme without themes_path config setting.')
+        
+        config['theme_path'] = theme_path
         
     app = StatusBoardApplication(default_routes, **config)
     

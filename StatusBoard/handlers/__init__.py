@@ -5,14 +5,37 @@ import tornado.web
 import json
 from StatusBoard.toolkit import SetEncoder
 from hashlib import md5
+import os
 import sqlite3
 
 class IndexHandler(tornado.web.RequestHandler):
     """Handler for root URL."""
     
+    def get_template_path(self):
+        if self.application.settings.get('theme', None):
+            return self.application.settings['theme_path']
+        else:
+            return None
+    
+    def theme_url(self, path):
+        settings = {
+            'static_url_prefix': '/theme/',
+            'static_path': self.application.settings['theme_path']
+        }
+        return ThemeStaticFileHandler.make_static_url(
+            settings, path
+        )
+    
     def get(self):
         """Renders index template used to bootstrap the app."""
-        self.render('../templates/index.html')
+        if self.application.settings.get('theme', None):
+            self.render('index.html', theme_url=self.theme_url)
+        else:
+            self.render('../templates/index.html')
+        
+class ThemeStaticFileHandler(tornado.web.StaticFileHandler):
+    """Custom static file handler for theme files."""
+    pass
         
 class StatusHandler(tornado.web.RequestHandler):
     """Handler for getting worker status."""
