@@ -20,9 +20,10 @@ app_config = {
         'issue_trackers': { 1: 'Bug', 2: 'Feature' }
     },
     'yahoo_weather': {
-        'woeid': '498842',
+        'woeid': '526363',
         'unit': 'c'
-    }
+    },
+    'theme': 'bootstrapped'
 }
 
 app_config['logos_path'] = os.path.abspath(os.path.dirname(__file__))

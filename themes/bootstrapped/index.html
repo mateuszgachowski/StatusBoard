@@ -9,6 +9,8 @@
         
         <link href="{{ theme_url('bootstrap.css') }}" rel="stylesheet">
         <style>
+            div.row { margin-bottom: 18px; }
+            div.well, #xmpp-msg, table.table { margin-bottom: 0px; }
             footer { border-top: 1px solid #eeeeee; padding-top: 17px; }
         </style>
         
@@ -17,11 +19,57 @@
         <script type="text/javascript" src="{{ static_url('application.js'); }}"></script>
         
         <script type="text/javascript">
-            window.SBApp.set_channels([ 'pinger' ]);
+            window.SBApp.set_channels([ 'pinger', 'redmine', 'weather', 'xmpp' ]);
             $(function() {
                 window.SBApp.on('pinger', function(data) {
-                    console.log(data);
+                    $('#people-active').text(data.active);
+                    $('#people-inactive').text(data.inactive);
                 });
+                
+                window.SBApp.on('redmine', function(data) {
+                    var table = $('#redmine-projects');
+                        
+                    table.empty();
+                    $.each(data.projects, function(index, item) {
+                        var html = '<tr>';
+                        
+                        html += '<td>' + item.name + '</td>',
+                        html += '<td>' + item.issues[1].open + '</td>';
+                        html += '<td>' + item.issues[2].open + '</td>';
+                        
+                        html += '<td>';
+                        var sep = '';
+                        $.each(item.people, function(index2, person_idx) {
+                            html += sep + window.SBApp.people[person_idx].name;
+                            sep = ', ';
+                        });
+                        html += '</td>';
+                        
+                        html += '</tr>';
+                        
+                        table.append($(html));
+                    });
+                    
+                    $('#redmine-count').text(data.projects.length);
+                });
+                
+                window.SBApp.on('weather', function(data) {
+                    $('#weather').attr('src', '/static/weather-icons/' + data.icon_code + '.png');
+                    $('#weather').attr('alt', data.description);
+                    $('#weather').attr('title', data.description);
+                    
+                    $('#weather-city').text(data.city);
+                    $('#weather-temp').text(data.temperature + '°' + data.temperature_unit);
+                });
+                
+                window.SBApp.on('xmpp', function(data) {
+                    if (data.hasOwnProperty('person') === false) {
+                        $('#xmpp-msg').text(data[0].message);
+                    } else {
+                        $('#xmpp-msg').text(data.message);
+                    }
+                });
+                
                 window.SBApp.start();
             });
         </script>
@@ -34,21 +82,66 @@
             </div>
             
             <div class="row">
+                <div class="span2" style="text-align: center; line-height: 94px;">
+                    <img src="/logo.png" style="max-height: 84px; max-width: 100px; vertical-align: middle;" />
+                </div>
+                <div class="span2">
+                    <div class="well">
+                        <h3>Present</h3>
+                        <p id="people-active">?</p>
+                    </div>
+                </div>
+                <div class="span2">
+                    <div class="well">
+                        <h3>Absent</h3>
+                        <p id="people-inactive">?</p>
+                    </div>
+                </div>
+                <div class="span2">
+                    <div class="well">
+                        <h3>Projects</h3>
+                        <p id="redmine-count">?</p>
+                    </div>
+                </div>
                 <div class="span4">
                     <div class="well">
-                        <h3>People</h3>
-                        <dl class="dl-horizontal">
-                            <dt>Active</dt>
-                            <dd>?</dd>
-                            <dt>Inactive</dt>
-                            <dd>?</dd>
-                        </dl>
+                        <img id="weather" src="{{ static_url('weather-icons/na.png') }}" style="float: left;" alt="" height="54">
+                        <h3 id="weather-city">?</h3>
+                        <p id="weather-temp">?</p>
                     </div>
                 </div>
             </div>
             
+            <div class="row">
+                <div class="span2">
+                    <h3>NEWS</h3>
+                </div>
+                
+                <div class="span10">
+                    <p id="xmpp-msg" style="line-height: 27px;">?</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="span12">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Tasks</th>
+                                <th>Bugs</th>
+                                <th>People</th>
+                            </tr>
+                        </thead>
+                        
+                        <tbody id="redmine-projects">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
             <footer>
-                <p><a href="https://github.com/tomekwojcik/StatusBoard">StatusBoard:Reloaded</a> by <a href="http://www.bthlabs.pl/">BTHLabs</a>. Based on <a href="https://github.com/weeby/StatusBoard">StatusBoard</a> by <a href="http://www.weebystudio.com/">Weeby</a></p>
+                <p>Powered by <a href="https://github.com/weeby/StatusBoard">StatusBoard</a> by <a href="http://www.weebystudio.com/">Weeby</a> &bull; <a>Bootstrapped Theme</a> by <a href="http://www.bthlabs.pl/">BTHLabs</a></p>
             </footer>
         </div>
     </body>

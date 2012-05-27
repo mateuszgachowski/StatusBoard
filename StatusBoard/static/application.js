@@ -49,9 +49,11 @@
             if (job === undefined) {
                 queue_done();
             } else {
-                console.log(job);
                 load_status(job, function(data) {
-                    message_handlers[job].apply(message_handlers, [ data ]);
+                    var handler = message_handlers[job];
+                    if (handler !== undefined) {
+                        handler(data);
+                    }
                     queue_next();
                 });
             }
@@ -75,7 +77,7 @@
             i = 0;
             
         for(i = 0; i < channels.length; i += 1) {
-            event_source.message(channels[i], message_handlers[channels[i]]);
+            event_source.message(channels[i], message_handlers[channels[i]] || function() {});
         }
         
         event_source.message('sysmsg', function(data) {
