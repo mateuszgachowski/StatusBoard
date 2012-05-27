@@ -5,30 +5,32 @@ import StatusBoard.workers
 
 app_config = {
     'xmpp_bot': {
-        'server': 'server',
-        'port': 0,
-        'jid': 'jid',
-        'password': 'password',
-        'database': None
+        'server': 'talk.google.com',
+        'port': 5222,
+        'jid': 'bot@snakeweb.net',
+        'password': 'bilbo#2011pl',
+        'database': '/Users/bilbo/Projects/socketio/StatusBoard/db.sqlite'
     },
     'people': [
-        { 'name': 'Person', 'ip': '127.0.0.1', 'gravatar_mail': 'person@company.com', 'jid': 'person@company.com' }
+        { 'name': 'Bilbo', 'ip': '127.0.0.1', 'gravatar_mail': 'labs@tomekwojcik.pl', 'jid': 'tomek@tomekwojcik.pl', 'redmine_mail': 'bilbo@shire.local' }
     ],
     'redmine': {
-        'api_key': '',
-        'api_base': '',
-        'issue_trackers': { 1: '' }
+        'api_key': '05ec1bdcbbcdae0ee2ad40be792dd517503193f7',
+        'api_base': 'http://redmine.web/',
+        'issue_trackers': { 1: 'Bug', 2: 'Feature' }
     },
     'yahoo_weather': {
-        'woeid': '',
-        'unit': ''
-    },
-    'theme': 'bootstrapped'
+        'woeid': '498842',
+        'unit': 'c'
+    }
 }
 
 app_config['logos_path'] = os.path.abspath(os.path.dirname(__file__))
 app_config['themes_path'] = os.path.abspath(os.path.join(os.path.dirname(__file__), 'themes'))
 
 channels = {
-    'pinger': StatusBoard.workers.PingerWorker
+    'pinger': StatusBoard.workers.PingerWorker,
+    'redmine': StatusBoard.workers.RedmineWorker,
+    'xmpp': StatusBoard.workers.XMPPBot,
+    'weather': StatusBoard.workers.YahooWeatherWorker
 }

@@ -7,11 +7,24 @@
         <meta name="description" content="">
         <meta name="author" content="">
         
-        <!-- Le styles -->
         <link href="{{ theme_url('bootstrap.css') }}" rel="stylesheet">
         <style>
             footer { border-top: 1px solid #eeeeee; padding-top: 17px; }
         </style>
+        
+        <script type="text/javascript" src="{{ static_url('BTHEventSource.js'); }}"></script>
+        <script type="text/javascript" src="{{ static_url('jquery-1.7.2.min.js'); }}"></script>
+        <script type="text/javascript" src="{{ static_url('application.js'); }}"></script>
+        
+        <script type="text/javascript">
+            window.SBApp.set_channels([ 'pinger' ]);
+            $(function() {
+                window.SBApp.on('pinger', function(data) {
+                    console.log(data);
+                });
+                window.SBApp.start();
+            });
+        </script>
     </head>
     
     <body>
@@ -26,9 +39,9 @@
                         <h3>People</h3>
                         <dl class="dl-horizontal">
                             <dt>Active</dt>
-                            <dd>0</dd>
+                            <dd>?</dd>
                             <dt>Inactive</dt>
-                            <dd>0</dd>
+                            <dd>?</dd>
                         </dl>
                     </div>
                 </div>

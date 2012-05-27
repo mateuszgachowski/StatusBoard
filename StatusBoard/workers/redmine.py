@@ -117,7 +117,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
             entry_date = datetime.date(int(entry_created_on[0]), int(entry_created_on[1]), int(entry_created_on[2]))
             delta = today - entry_date
             
-            if delta.days <= 5:
+            if delta.days <= 365:
                 if self._new_projects.has_key(entry['project']['id']) == False:
                     self._new_projects[entry['project']['id']] = {
                         'name': entry['project']['name'],

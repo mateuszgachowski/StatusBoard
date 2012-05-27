@@ -7,11 +7,9 @@
     var set_css_rotation = function(element, rotation) {
         if ((element != null) && (isNaN(rotation) == false)) {
             var value = 'rotate(' + rotation + 'deg)';
-            element.setStyles({
-                '-webkit-transform': value,
-                '-moz-transform': value,
-                'transform': value
-            });
+            element.css('-webkit-transform', value);
+            element.css('-moz-transform', value);
+            element.css('transform', value);
         }
     };
         
@@ -27,11 +25,11 @@
         set_css_rotation(h_hours, hours * 30);
     };
     
-    window.addEvent('domready', function() {
-        clock = $('clock');
-        h_hours = clock.getElement('div.hand.hours');
-        h_minutes = clock.getElement('div.hand.minutes');
-        h_seconds = clock.getElement('div.hand.seconds');
+    $(function() {
+        clock = $('#clock');
+        h_hours = $('div.hand.hours', clock);
+        h_minutes = $('div.hand.minutes', clock);
+        h_seconds = $('div.hand.seconds', clock);
         update_hands();
         var interval = window.setInterval(update_hands, 1000);
     });
