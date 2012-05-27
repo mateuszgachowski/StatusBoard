@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>Bootstrap, from Twitter</title>
+        <title>StatusBoard:Reloaded</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="description" content="">
         <meta name="author" content="">
@@ -10,13 +10,33 @@
         <!-- Le styles -->
         <link href="{{ theme_url('bootstrap.css') }}" rel="stylesheet">
         <style>
-            body { padding-top: 60px; }
+            footer { border-top: 1px solid #eeeeee; padding-top: 17px; }
         </style>
     </head>
     
     <body>
         <div class="container">
-            <p>Hello, World!</p>
+            <div class="page-header">
+                <h1>StatusBoard:Reloaded</h1>
+            </div>
+            
+            <div class="row">
+                <div class="span4">
+                    <div class="well">
+                        <h3>People</h3>
+                        <dl class="dl-horizontal">
+                            <dt>Active</dt>
+                            <dd>0</dd>
+                            <dt>Inactive</dt>
+                            <dd>0</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            
+            <footer>
+                <p><a href="https://github.com/tomekwojcik/StatusBoard">StatusBoard:Reloaded</a> by <a href="http://www.bthlabs.pl/">BTHLabs</a>. Based on <a href="https://github.com/weeby/StatusBoard">StatusBoard</a> by <a href="http://www.weebystudio.com/">Weeby</a></p>
+            </footer>
         </div>
     </body>
 </html>
