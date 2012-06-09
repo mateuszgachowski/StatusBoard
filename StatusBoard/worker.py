@@ -11,7 +11,9 @@ class BaseWorker(object):
         """Constructor."""
         self._application = application
         self._options = kwargs
-        self.warmup()
+        
+        if application.settings.get('mode', 'master') == 'master':
+            self.warmup()
             
     def _person_idx(self, key, value, default_key='gravatar_mail'):
         """Filters people list and returns index of entry that matches search

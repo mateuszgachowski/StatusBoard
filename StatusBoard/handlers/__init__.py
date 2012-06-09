@@ -2,6 +2,7 @@
 """Request handlers."""
 
 import tornado.web
+import cPickle
 import json
 from StatusBoard.toolkit import SetEncoder
 from hashlib import md5
@@ -40,23 +41,26 @@ class ThemeStaticFileHandler(tornado.web.StaticFileHandler):
 class StatusHandler(tornado.web.RequestHandler):
     """Handler for getting worker status."""
     
+    @tornado.web.asynchronous
     def get(self, channel_name):
         """Returns status of a specified worker."""
-        try:
-            status = self.application.workers[channel_name].status()
-        except KeyError:
-            is_json = True
-            status = json.dumps(None)
+        if self.application.settings.get('mode', 'master') == 'master':
+            status = self.application.redis.get('StatusBoard:status:' + channel_name, self._on_status)
         else:
-            is_json = False
-            if isinstance(status, dict):
-                is_json = True
-                status = json.dumps(status, cls=SetEncoder)
-            
-        if is_json == True:
-            self.set_header('Content-Type', 'application/json; charset=utf-8')
+            status = self.application.statuses.get(channel_name, None)
+            self._on_status(status)
         
+    def _on_status(self, status):
+        if status is not None:
+            try:
+                status = cPickle.loads(status)
+            except cPickle.UnpicklingError:
+                status = None
+                
+        status = json.dumps(status, cls=SetEncoder)
+        self.set_header('Content-Type', 'application/json; charset=utf-8')
         self.write(status)
+        self.finish()
             
     def post(self, channel_name):
         """Forces a worker identified by ``channel_name`` to refresh as if its
@@ -111,8 +115,8 @@ class PeopleHandler(tornado.web.RequestHandler):
         if len(new_person) == 0:
             raise tornado.web.HTTPError(400)
             
-        self.application.emit('sysmsg', 'h4x0r_people')
         self._h4x0r3d[current_person['gravatar_mail']] = new_person
+        self.application.emit('sysmsg', 'h4x0r_people', payload=self._h4x0r3d)
         self.write('Kaboom!')
         
     def delete(self):
@@ -127,7 +131,7 @@ class PeopleHandler(tornado.web.RequestHandler):
         except:
             raise tornado.web.HTTPError(400)
             
-        self.application.emit('sysmsg', 'h4x0r_people')
+        self.application.emit('sysmsg', 'h4x0r_people', payload=self._h4x0r3d)
         self.write('Bummer.')
         
 class XMPPBrowserHandler(tornado.web.RequestHandler):

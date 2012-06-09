@@ -14,11 +14,15 @@ def main():
     parser.set_usage('%prog [options]')
     parser.add_option('-a', '--address', dest="address", help="address to bind to. Defaults to 127.0.0.1", action="store", default="127.0.0.1")
     parser.add_option('-p', '--port', dest="port", help="port to bind to. Defaults to 9001.", action="store", type="int", default=9001)
+    parser.add_option('-s', '--slave', dest="slave", help="start in slave mode.", action="store_true", default=False)
     parser.add_option('-d', '--debug', dest="debug", help="debugging", action="store_true", default=False)
     options, args = parser.parse_args()
     
     config.app_config['debug'] = options.debug
     config.app_config['socket_io_port'] = options.port
+    
+    if options.slave:
+        config.app_config['mode'] = 'slave'
     
     application = create_app(config.channels, config.app_config)
     application.start_workers()

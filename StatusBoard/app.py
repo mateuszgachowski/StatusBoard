@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Application class."""
 
+import brukva
+import cPickle
 import logging
 import tornado.web
 import tornado.httpclient
@@ -15,6 +17,9 @@ class StatusBoardApplication(tornado.web.Application):
     
     channels = set()
     workers = dict()
+    statuses = dict()
+    
+    redis = None
         
     @classmethod
     def add_listener(self, channel_name, channel_listener):
@@ -26,24 +31,51 @@ class StatusBoardApplication(tornado.web.Application):
         """Registers a listener from the channel."""
         self.channels.remove(channel_listener)
         
-    @classmethod
+    def _update_status(self, channel_name, message):
+        self.redis.set('StatusBoard:status:' + channel_name, cPickle.dumps(message))
+        
     def register_worker(self, channel_name, worker):
         """Registers a worker for a channel."""
         self.workers[channel_name] = worker
         
-    @classmethod
+        if self.settings.get('mode', 'master') == 'master':
+            self._update_status(channel_name, worker.status())
+        else:
+            self.redis.get('StatusBoard:status:' + channel_name,
+                           lambda status: self.statuses.update({ channel_name: status }))
+    
     def remove_worker(self, channel_name):
         """Removes a worker for a channel."""
         del(self.workers[channel_name])
         
     def start_workers(self):
         """Starts registered workers."""
-        for channel_name in self.workers:
-            self.workers[channel_name].start()
+        if self.settings.get('mode', 'master') == 'master':
+            for channel_name in self.workers:
+                self.workers[channel_name].start()
+        else:
+            redis_channels = [ 'StatusBoard:' + channel for channel in self.workers.keys() ]
+            redis_channels.append('StatusBoard:sysmsg')
+            self.redis.subscribe(redis_channels)
+            self.redis.listen(self._on_message)
+            
+    def _on_message(self, message):
+        """Callback for Redis PubSub listener."""
+        channel_name = message.channel.replace('StatusBoard:', '')
+        body = cPickle.loads(message.body)
+        
+        if channel_name == 'sysmsg':
+            if body['command'] == 'h4x0r_people':
+                StatusBoard.handlers.PeopleHandler._h4x0r3d = body['payload']
+            
+            body = body['command']
+        
+        self.emit(channel_name, body)
     
-    def emit(self, channel_name, message):
+    def emit(self, channel_name, message, payload=None):
         """Emit the message to channel listeners."""
         logging.debug('Emitting event "%s": %s', channel_name, message)
+        
         for listener in self.channels:
             try:
                 listener.emit(message, channel_name)
@@ -56,6 +88,20 @@ class StatusBoardApplication(tornado.web.Application):
             except RuntimeError:
                 # ARRRR! :D
                 pass
+                
+        if self.settings.get('mode', 'master') == 'master':
+            if channel_name != 'sysmsg':
+                self._update_status(channel_name, message)
+            else:
+                message = {
+                    'command': message,
+                    'payload': payload
+                }   
+            
+            self.redis.publish('StatusBoard:' + channel_name, cPickle.dumps(message))
+        else:
+            if channel_name != 'sysmsg':
+                self.statuses[channel_name] = cPickle.dumps(message)
         
 class Channel(btheventsource.BTHEventStreamHandler):
     @tornado.web.asynchronous
@@ -118,9 +164,12 @@ def create_app(channels=None, config=None):
         
     app = StatusBoardApplication(default_routes, **config)
     
+    app.redis = brukva.Client(**config.get('redis', {}))
+    app.redis.connect()
+    
     for channel_name in channels:
         worker_cls = channels[channel_name]
         worker = worker_cls(app)
-        app.register_worker(channel_name, worker)
+        app.register_worker(channel_name, worker)            
     
     return app
