@@ -1,3 +1,4 @@
 brukva==0.0.1
+pytz==2012c
 tornado==2.1
 sleekxmpp==1.0rc2
