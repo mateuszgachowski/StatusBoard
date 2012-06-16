@@ -2,18 +2,23 @@
 """Abstract classes for workers."""
 
 import datetime
+import math
+import time
 import tornado.ioloop
 import pytz
-import time
 
 class BaseWorker(object):
     """Base worker class. Subclass it to create other worker classes."""
     
     _local_timezone = None
     
-    def __init__(self, application, **kwargs):
+    _default_interval = 5 # 5 seconds
+    
+    def __init__(self, application, channel_name, interval=None, **kwargs):
         """Constructor."""
         self._application = application
+        self._channel_name = channel_name
+        self._interval = interval or self._default_interval
         self._options = kwargs
         
         if application.settings.get('mode', 'master') == 'master':
@@ -111,8 +116,6 @@ class PeriodicWorker(BaseWorker):
     Periodic workers use tornado.ioloop.PeriodicCallback instances to schedule
     their execution at a given interval."""
     
-    interval = 5000 # 5 seconds
-    
     def __init__(self, *args, **kwargs):
         self._periodic_callback = None
         
@@ -121,7 +124,7 @@ class PeriodicWorker(BaseWorker):
     def start(self):
         if self._periodic_callback == None:
             self._periodic_callback = tornado.ioloop.PeriodicCallback(
-                self._on_periodic_callback, self.interval
+                self._on_periodic_callback, self._interval * 1000
             )
             
         self._periodic_callback.start()
@@ -145,8 +148,6 @@ class ScheduledWorker(BaseWorker):
     after a given timeout. The worker will execute only once and in order to be
     executed again it has to be scheduled manually."""
     
-    timeout = 5 # 5 seconds
-    
     def __init__(self, *args, **kwargs):
         self._timeout = None
         
@@ -155,7 +156,7 @@ class ScheduledWorker(BaseWorker):
     def start(self):
         if self._timeout == None:
             self._timeout = tornado.ioloop.IOLoop.instance().add_timeout(
-                time.time() + self.timeout, self._on_timeout
+                time.time() + self._interval, self._on_timeout
             )
             
     def stop(self):

@@ -10,7 +10,7 @@ import datetime
 
 class RedmineWorker(StatusBoard.worker.ScheduledWorker):
     """Redmine integration worker."""
-    timeout = 300
+    _default_interval = 300
     
     _endpoints = {
         'users': '/users.json',
@@ -21,7 +21,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
     
     def _redmine_api_request(self, endpoint):
         """Return a HTTPRequest for an API endpoint."""
-        api_base = self._application.settings['redmine']['api_base']
+        api_base = self._options['api_base']
         if api_base.endswith('/') == False:
             api_base += '/'
             
@@ -30,11 +30,11 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
         
         return tornado.httpclient.HTTPRequest(
             api_base + endpoint,
-            headers={ 'X-Redmine-API-Key': self._application.settings['redmine']['api_key'] }
+            headers={ 'X-Redmine-API-Key': self._options['api_key'] }
         )
     
     def warmup(self):
-        logging.info('RedmineWorker: Warming up.')
+        logging.info('RedmineWorker (' + self._channel_name + '): Warming up.')
         self._projects = dict()
         self._new_projects = dict()
         self._users = dict()
@@ -42,7 +42,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
         self._client_mode = False
         
         self._issues = dict()
-        for tracker_id in self._application.settings['redmine']['issue_trackers'].keys():
+        for tracker_id in self._options['issue_trackers'].keys():
             self._issues[tracker_id] = { 'open': 0, 'closed': 0 }
         
         http_client = tornado.httpclient.HTTPClient()
@@ -56,7 +56,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
         self._read_time_entries(time_entries_rsp)
         
         for project_id in self._new_projects.keys():
-            for tracker_id in self._application.settings['redmine']['issue_trackers'].keys():
+            for tracker_id in self._options['issue_trackers'].keys():
                 open_issues_req = self._redmine_api_request(
                     self._endpoints['issues'] % (project_id, tracker_id, 'open')
                 )
@@ -81,7 +81,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
         self._projects = copy(self._new_projects)
         self._new_projects = dict()
                 
-        logging.info('RedmineWorker: Warmed up.')
+        logging.info('RedmineWorker (' + self._channel_name + '): Warmed up.')
         
     def status(self):
         response = { 'projects': [] }
@@ -132,13 +132,13 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
                     except:
                         self._new_projects[entry['project']['id']]['people'].append(person_id)
             else:
-                logging.debug('Skipping time entry %d.' % (entry['id'], ))
+                logging.debug('RedmineWorker (' + self._channel_name + '): Skipping time entry %d.' % (entry['id'], ))
                 
     def _queue_done(self):
         """Emit new projects info to our listeners."""
-        logging.debug('Queue done. Kthxbye.')
+        logging.debug('RedmineWorker (' + self._channel_name + '): Queue done. KTXHBYE.')
         self._projects = copy(self._new_projects)
-        self._application.emit('redmine', self.status())
+        self._application.emit(self._channel_name, self.status())
         self.start()
     
     def _on_fetch_issues(self, job, response):
@@ -158,7 +158,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
         except:
             self._queue_done()
         else:
-            logging.debug('Got job. project_id = %d, tracker_id = %d, status_id = %s' % job)
+            logging.debug('RedmineWorker (' + self._channel_name + '): Got job. project_id = %d, tracker_id = %d, status_id = %s' % job)
             http_client = tornado.httpclient.AsyncHTTPClient()
             req = self._redmine_api_request(
                 self._endpoints['issues'] %  job
@@ -172,7 +172,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
         
         self._queue = list()
         for project_id in self._new_projects.keys():
-            for tracker_id in self._application.settings['redmine']['issue_trackers'].keys():
+            for tracker_id in self._options['issue_trackers'].keys():
                 for status_id in ( 'open', 'closed' ):
                     self._queue.append((
                         project_id, tracker_id, status_id
@@ -183,11 +183,11 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
         self._next_job()
                 
     def _on_timeout(self):
-        logging.info('RedmineWorker: Timelimit hit.')
+        logging.info('RedmineWorker (' + self._channel_name + '): Timelimit hit.')
         
         self.stop()
         if self._client_mode == True:
-            logging.info('RedmineWorker: Client mode is on.')
+            logging.info('RedmineWorker (' + self._channel_name + '): Client mode is on.')
             self._queue_done()
         else:
             http_client = tornado.httpclient.AsyncHTTPClient()
@@ -204,7 +204,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
         Cheating is bad, we know, but it's also fun :)."""
         if mode == 'on':
             self.stop()
-            logging.info('Enabling client mode for projects [ %s ].' % (', '.join(projects), ))
+            logging.info('RedmineWorker (' + self._channel_name + '): Enabling client mode for projects [ %s ].' % (', '.join(projects), ))
             active_hosts = self._application.workers['pinger'].active_hosts()
             
             people = []
@@ -235,7 +235,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
                         'people': list()
                     }
                     
-                    for tracker_id in self._application.settings['redmine']['issue_trackers'].keys():
+                    for tracker_id in self._options['issue_trackers'].keys():
                         open_issues_req = self._redmine_api_request(
                             self._endpoints['issues'] % (project_id, tracker_id, 'open')
                         )
@@ -271,7 +271,7 @@ class RedmineWorker(StatusBoard.worker.ScheduledWorker):
             self._on_timeout()
         elif mode == 'off':
             self.stop()
-            logging.info('Disabling client mode for projects.')
+            logging.info('RedmineWorker (' + self._channel_name + '): Disabling client mode for projects.')
             self._client_mode = False
             self._on_timeout()
         else:

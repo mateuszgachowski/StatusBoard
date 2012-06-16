@@ -6,7 +6,6 @@ import tornado.httpclient
 import json
 import logging
 import datetime
-import math
 import time
 import pytz
 
@@ -14,7 +13,7 @@ DEFAULT_TIMEOUT = 600 # 10 minutes
 
 class TwitterWorker(StatusBoard.worker.ScheduledWorker):
     """Twitter integration worker."""
-    timeout = DEFAULT_TIMEOUT
+    _default_interval = DEFAULT_TIMEOUT
     
     _base_url = 'http://api.twitter.com/1/statuses/user_timeline.json?screen_name='
         
@@ -47,7 +46,7 @@ class TwitterWorker(StatusBoard.worker.ScheduledWorker):
                 return DEFAULT_TIMEOUT
         
     def _twitter_request(self):
-        return self._base_url + self._application.settings['twitter_username']
+        return self._base_url + self._options['username']
     
     def _parse_tweet(self, text):
         return text
@@ -84,11 +83,11 @@ class TwitterWorker(StatusBoard.worker.ScheduledWorker):
     def _on_response(self, response):
         if self._is_rate_limit_exceeded(response) == True:
             logging.error('TwitterWorker: Rate limit exceeded. Tweaking timeout.')
-            self.timeout = self._throttled_timeout(response)
+            self._interval = self._throttled_timeout(response)
         else:
-            self.timeout = DEFAULT_TIMEOUT
+            self._interval = DEFAULT_TIMEOUT
             self._tweets = self._read_response(response)
-            self._application.emit('twitter', self.status())
+            self._application.emit(self._channel_name, self.status())
             
         self.start()
     
@@ -101,7 +100,7 @@ class TwitterWorker(StatusBoard.worker.ScheduledWorker):
         except tornado.httpclient.HTTPError, exc:
             if self._is_rate_limit_exceeded(exc.response) == True:
                 logging.error('TwitterWorker: Rate limit exceeded. Tweaking timeout.')
-                self.timeout = self._throttled_timeout(exc.response)
+                self._interval = self._throttled_timeout(exc.response)
             else:
                 raise
             

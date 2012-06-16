@@ -9,18 +9,18 @@ import shlex
 import logging
 
 class PingerWorker(StatusBoard.worker.ScheduledWorker):
-    timeout = 60
+    _default_interval = 60
     cmd = 'ping -t 2 -c 1 %s'
     
     def _start_ping(self, ip):
         """Starts pinging a host and returns the subprocess object."""
         command = shlex.split(self.cmd % (ip, ))
         
-        logging.debug('PingerWorker: Pinging %s' % (ip, ))
+        logging.debug('PingerWorker (' + self._channel_name + '): Pinging %s' % (ip, ))
         return subprocess.Popen(command, stdout=self._dev_null, stderr=self._dev_null)
         
     def warmup(self):
-        logging.info('PingerWorker: Warming up.')
+        logging.info('PingerWorker (' + self._channel_name + '): Warming up.')
         self._active_hosts = set()
         self._inactive_hosts = set()
         self._dev_null = open('/dev/null', 'wb')
@@ -37,7 +37,7 @@ class PingerWorker(StatusBoard.worker.ScheduledWorker):
             else:
                 self._inactive_hosts.add(person['ip'])
         
-        logging.info('PingerWorker: Warmed up.')
+        logging.info('PingerWorker (' + self._channel_name + '): Warmed up.')
         
     def status(self):
         return { 'active': len(self._active_hosts), 'inactive': len(self._inactive_hosts) }
@@ -88,7 +88,7 @@ class PingerWorker(StatusBoard.worker.ScheduledWorker):
             self._ping()
         
     def _on_timeout(self):
-        logging.info('PingerWorker: Timelimit hit.')
+        logging.info('PingerWorker (' + self._channel_name + '): Timelimit hit.')
         self._current_idx = 0
         self._ping()
         

@@ -69,14 +69,14 @@ class YahooWeatherRSSParser(object):
 
 class YahooWeatherWorker(StatusBoard.worker.PeriodicWorker):
     """Yahoo! Weather integration worker."""
-    interval = 3600000 # 1 hour
+    _default_interval = 3600 # 1 hour
     
     def _yahoo_weather_request(self):
         """Return a HTTPRequest for forecast."""
         return tornado.httpclient.HTTPRequest(
             'http://weather.yahooapis.com/forecastrss?w=%s&u=%s' % (
-                self._application.settings['yahoo_weather']['woeid'],
-                self._application.settings['yahoo_weather']['unit']
+                self._options['woeid'],
+                self._options['unit']
             )
         )
         
@@ -88,10 +88,10 @@ class YahooWeatherWorker(StatusBoard.worker.PeriodicWorker):
         """Read weather forecast RSS."""
         response.rethrow()
         self._status = self._read_forecast(response.body)
-        self._application.emit('weather', self._status)
+        self._application.emit(self._channel_name, self._status)
     
     def warmup(self):
-        logging.info('YahooWeatherWorker: Warming up.')
+        logging.info('YahooWeatherWorker (' + self._channel_name + '): Warming up.')
         self._status = dict()
         http_client = tornado.httpclient.HTTPClient()
         
@@ -99,13 +99,13 @@ class YahooWeatherWorker(StatusBoard.worker.PeriodicWorker):
         response = http_client.fetch(req)
         self._status = self._read_forecast(response.body)
         
-        logging.info('YahooWeatherWorker: Warmed up.')
+        logging.info('YahooWeatherWorker (' + self._channel_name + '): Warmed up.')
         
     def status(self):
         return self._status
     
     def _on_periodic_callback(self):
-        logging.info('YahooWeatherWorker: Timelimit hit.')
+        logging.info('YahooWeatherWorker (' + self._channel_name + '): Timelimit hit.')
         http_client = tornado.httpclient.AsyncHTTPClient()
         
         req = self._yahoo_weather_request()

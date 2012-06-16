@@ -9,7 +9,7 @@ import pytz
 import tornado.httpclient
 
 class FeedWorker(StatusBoard.worker.PeriodicWorker):
-    interval = 60000 # 1 minute
+    _default_interval = 60 # 1 minute
     
     def _read_response(self, response):
         items = []
@@ -17,8 +17,8 @@ class FeedWorker(StatusBoard.worker.PeriodicWorker):
         feed = feedparser.parse(response.body)
         
         if 'bozo_exception' in feed:
-            logging.error("FeedWorker: couldn't read the feed.")
-            logging.error("FeedWorker: feedparser error: %s" % str(feed['bozo_exception']))
+            logging.error("FeedWorker (" + self._channel_name + "): couldn't read the feed.")
+            logging.error("FeedWorker (" + self._channel_name + "): feedparser error: %s" % str(feed['bozo_exception']))
         else:
             for entry in feed['entries'][0:3]:
                 entry_datetime = None
@@ -44,22 +44,22 @@ class FeedWorker(StatusBoard.worker.PeriodicWorker):
         return items
     
     def warmup(self):
-        logging.debug('FeedWorker: Warming up.')
+        logging.debug('FeedWorker (' + self._channel_name + '): Warming up.')
         http_client = tornado.httpclient.HTTPClient()
         
-        response = http_client.fetch(self._application.settings['feed_url'])
+        response = http_client.fetch(self._options['url'])
         self._items = self._read_response(response)
-        logging.debug('FeedWorker: Warmed up.')
+        logging.debug('FeedWorker (' + self._channel_name + '): Warmed up.')
             
     def status(self):
         return { 'items': self._items }
         
     def _on_response(self, response):
         self._items = self._read_response(response)
-        self._application.emit('rss', self.status())
+        self._application.emit(self._channel_name, self.status())
         
     def _on_periodic_callback(self):
-        logging.info('FeedWorker: Timelimit hit.')
+        logging.info('FeedWorker (' + self._channel_name + '): Timelimit hit.')
         http_client = tornado.httpclient.AsyncHTTPClient()
         
-        http_client.fetch(self._application.settings['feed_url'], self._on_response)
+        http_client.fetch(self._options['url'], self._on_response)

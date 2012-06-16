@@ -20,19 +20,19 @@ class XMPPBot(StatusBoard.worker.BaseWorker):
         StatusBoard.worker.BaseWorker.__init__(self, *args, **kwargs)
         
     def warmup(self):
-        logging.info('XMPPBot: Warming up.')
+        logging.info('XMPPBot (' + self._channel_name + '): Warming up.')
         self._messages = list()
         self._db = None
             
-        if self._application.settings['xmpp_bot']['database'] != None:
-            self._db = sqlite3.connect(self._application.settings['xmpp_bot']['database'])                
+        if self._options['database'] != None:
+            self._db = sqlite3.connect(self._options['database'])                
             cursor = self._db.cursor()
             
             cursor.execute('SELECT * FROM xmpp_messages ORDER BY id DESC LIMIT 5')
             for row in cursor:
                 self._messages.append(json.loads(row[2]))
         
-        logging.info('XMPPBot: Warmed up.')
+        logging.info('XMPPBot (' + self._channel_name + '): Warmed up.')
             
     def status(self):
         response = {}
@@ -43,13 +43,13 @@ class XMPPBot(StatusBoard.worker.BaseWorker):
         
     def start(self):
         self._xmpp = sleekxmpp.ClientXMPP(
-            self._application.settings['xmpp_bot']['jid'],
-            self._application.settings['xmpp_bot']['password']
+            self._options['jid'],
+            self._options['password']
         )
         
         self._xmpp.connect((
-            self._application.settings['xmpp_bot']['server'],
-            self._application.settings['xmpp_bot']['port']
+            self._options['server'],
+            self._options['port']
         ))
         
         self._xmpp.add_event_handler("session_start", self._on_xmpp_session_start)
@@ -60,6 +60,10 @@ class XMPPBot(StatusBoard.worker.BaseWorker):
     def _handle_client_mode(self, msg, *args):
         if len(args) == 0:
             msg.reply('client_mode: mode project,project').send()
+            return
+            
+        if 'redmine_channel' not in self._options:
+            msg.reply('client_mode: this bot is not connected to Redmine').send()
             return
         
         mode = args[0]
@@ -75,9 +79,9 @@ class XMPPBot(StatusBoard.worker.BaseWorker):
                 msg.reply('client_mode: mode project,project').send()
                 return
             
-            self._application.workers['redmine'].client_mode('on', projects=projects)
+            self._application.workers[self._options['redmine_channel']].client_mode('on', projects=projects)
         elif mode == 'off':
-            self._application.workers['redmine'].client_mode('off', projects=projects)
+            self._application.workers[self._options['redmine_channel']].client_mode('off', projects=projects)
         else:
             msg.reply('client_mode: mode not found: ' + mode).send()
         
@@ -122,7 +126,7 @@ class XMPPBot(StatusBoard.worker.BaseWorker):
                     )
                     self._db.commit()
                 
-                self._application.emit('xmpp', message)
+                self._application.emit(self._channel_name, message)
 
     def _on_xmpp_session_start(self, event):
         """Handles XMPP session start event."""

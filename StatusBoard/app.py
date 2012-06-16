@@ -168,8 +168,19 @@ def create_app(channels=None, config=None):
     app.redis.connect()
     
     for channel_name in channels:
-        worker_cls = channels[channel_name]
-        worker = worker_cls(app)
+        if isinstance(channels[channel_name], tuple) == False:
+            worker_cls = channels[channel_name]
+            worker_options = {}
+            worker_interval = None
+        else:
+            worker_cls = channels[channel_name][0]
+            worker_interval = channels[channel_name][1]
+            try:
+                worker_options = channels[channel_name][2]
+            except IndexError:
+                worker_options = {}
+            
+        worker = worker_cls(app, channel_name, interval=worker_interval, **worker_options)
         app.register_worker(channel_name, worker)            
     
     return app
