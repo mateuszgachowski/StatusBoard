@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """Abstract classes for workers."""
 
+import datetime
 import tornado.ioloop
+import pytz
 import time
 
 class BaseWorker(object):
     """Base worker class. Subclass it to create other worker classes."""
+    
+    _local_timezone = None
     
     def __init__(self, application, **kwargs):
         """Constructor."""
@@ -28,6 +32,52 @@ class BaseWorker(object):
                 return str(i)
             
         return None
+        
+    def _format_timedelta(self, created_at):
+        """Formats timedelta between `created_at` and `datetime.datetime.now`
+        in a human-friendly format. """
+        tweet_datetime = created_at.astimezone(self.local_timezone)
+        
+        tweet_timedelta = datetime.datetime.now(self.local_timezone) - tweet_datetime
+        
+        result = 'Just now'
+        delta = 0
+        delta_string = None
+        
+        if tweet_timedelta.days == 0:
+            if tweet_timedelta.seconds > 3600:
+                delta = math.ceil(tweet_timedelta.seconds / 3600.0)
+                delta_string = '%d hours ago'
+                if delta == 1:
+                    delta_string = '%d hour ago'
+            elif tweet_timedelta.seconds > 60:
+                delta = math.ceil(tweet_timedelta.seconds / 60.0)
+                delta_string = '%d minutes ago'
+                if delta == 1:
+                    delta_string = '%d minute ago'
+        else:
+            delta = tweet_timedelta.days
+            delta_string = '%d days ago'
+            if delta == 1:
+                delta_string = '%d day ago'
+            elif delta > 7:
+                delta_string = None
+                result = tweet_datetime.strftime('%b %d, %Y')
+                
+        if delta_string is not None:
+            result = delta_string % (delta, )
+            
+        return result
+    
+    @property
+    def local_timezone(self):
+        if self._local_timezone is None:
+            try:
+                self._local_timezone = pytz.timezone(time.tzname[0])
+            except pytz.exceptions.UnknownTimeZoneError:
+                self._local_timezone = pytz.utc
+                
+        return self._local_timezone
         
     def warmup(self):
         """Warmup the worker, if needed. This will be invoked when application
