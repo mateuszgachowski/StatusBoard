@@ -6,9 +6,7 @@ import cPickle
 import logging
 import tornado.web
 import tornado.httpclient
-#import tornadio
 import StatusBoard.handlers
-#import StatusBoard.channel
 import os.path
 import btheventsource
 
@@ -91,7 +89,7 @@ class StatusBoardApplication(tornado.web.Application):
                 
         if self.settings.get('mode', 'master') == 'master':
             if channel_name != 'sysmsg':
-                self._update_status(channel_name, message)
+                self._update_status(channel_name, self.workers[channel_name].status())
             else:
                 message = {
                     'command': message,
@@ -117,7 +115,6 @@ default_routes = [
     (r'/', StatusBoard.handlers.IndexHandler),
     (r'/people', StatusBoard.handlers.PeopleHandler),
     (r'/status/(.+?)', StatusBoard.handlers.StatusHandler),
-    (r'/xmpp/browse', StatusBoard.handlers.XMPPBrowserHandler),
     (r'/events', Channel)
 ]
             

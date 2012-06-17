@@ -133,35 +133,3 @@ class PeopleHandler(tornado.web.RequestHandler):
             
         self.application.emit('sysmsg', 'h4x0r_people', payload=self._h4x0r3d)
         self.write('Bummer.')
-        
-class XMPPBrowserHandler(tornado.web.RequestHandler):
-    """Browser for XMPP messages archive."""
-    _db = None
-    def initialize(self):
-        if self._db == None and self.application.settings['xmpp_bot']['database'] != None:
-            self._db = sqlite3.connect(self.application.settings['xmpp_bot']['database'])
-            
-    def get(self):
-        if self._db != None:
-            cursor = self._db.cursor()
-            
-            try:
-                offset = int(self.get_argument('offset', 0))
-            except:
-                raise tornado.web.HTTPError(400)
-                
-            cursor.execute('SELECT * FROM xmpp_messages ORDER BY created_at DESC LIMIT 10 OFFSET %d' % (offset, ))
-            response = { 'messages': [] }
-            for row in cursor:
-                payload = json.loads(row[2])
-                
-                response['messages'].append({
-                    'author': self.application.settings['people'][int(payload['person'])]['name'],
-                    'created_at': row[1],
-                    'message': payload['message'],
-                })
-                
-            self.write(response)
-            
-        else:
-            raise tornado.web.HTTPError(501)

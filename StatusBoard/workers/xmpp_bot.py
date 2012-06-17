@@ -19,25 +19,27 @@ class XMPPBot(StatusBoard.worker.BaseWorker):
         self._xmpp = None
         StatusBoard.worker.BaseWorker.__init__(self, *args, **kwargs)
         
+    def _on_load_messages(self, response):
+        for message in response:
+            self._messages.append(json.loads(message))
+            
+        self._application._update_status(self._channel_name, self.status())
+        logging.info('XMPPBot (' + self._channel_name + '): Warmed up.')
+        
     def warmup(self):
         logging.info('XMPPBot (' + self._channel_name + '): Warming up.')
         self._messages = list()
-        self._db = None
-            
-        if self._options['database'] != None:
-            self._db = sqlite3.connect(self._options['database'])                
-            cursor = self._db.cursor()
-            
-            cursor.execute('SELECT * FROM xmpp_messages ORDER BY id DESC LIMIT 5')
-            for row in cursor:
-                self._messages.append(json.loads(row[2]))
         
-        logging.info('XMPPBot (' + self._channel_name + '): Warmed up.')
+        self._application.redis.lrange('StatusBoard:xmpp:' + self._channel_name,
+            0, 4, self._on_load_messages
+        )
             
     def status(self):
         response = {}
-        for i in range(len(self._messages)):
+        i = 0
+        for message in self._messages[0:5]:
             response[i] = self._messages[i]
+            i += 1
             
         return response
         
@@ -115,17 +117,13 @@ class XMPPBot(StatusBoard.worker.BaseWorker):
                 }
                 
                 self._messages = [ message ] + self._messages
-                if len(self._messages) > 3:
+                if len(self._messages) > 5:
                     self._messages.pop()
                     
-                if self._db != None:
-                    cursor = self._db.cursor()
-                    
-                    cursor.execute('INSERT INTO xmpp_messages (created_at, payload) VALUES (?, ?)',
-                        ( datetime.datetime.now(), json.dumps(message) )
-                    )
-                    self._db.commit()
-                
+                self._application.redis.lpush('StatusBoard:xmpp:' + self._channel_name,
+                    json.dumps(message)
+                )
+                                
                 self._application.emit(self._channel_name, message)
 
     def _on_xmpp_session_start(self, event):
