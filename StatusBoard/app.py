@@ -30,6 +30,7 @@ class StatusBoardApplication(tornado.web.Application):
         self.channels.remove(channel_listener)
         
     def _update_status(self, channel_name, message):
+        """Updates Redis status for a worker."""
         self.redis.set('StatusBoard:status:' + channel_name, cPickle.dumps(message))
         
     def register_worker(self, channel_name, worker):

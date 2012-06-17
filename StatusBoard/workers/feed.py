@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Twitter integration worker."""
+"""RSS/Atom/CDF feed integration worker."""
 
 import datetime
 import feedparser
@@ -12,6 +12,7 @@ class FeedWorker(StatusBoard.worker.PeriodicWorker):
     _default_interval = 60 # 1 minute
     
     def _read_response(self, response):
+        """Read feed response and processes it."""
         items = []
         
         feed = feedparser.parse(response.body)
@@ -55,6 +56,7 @@ class FeedWorker(StatusBoard.worker.PeriodicWorker):
         return { 'items': self._items }
         
     def _on_response(self, response):
+        """Handle async HTTP client response."""
         self._items = self._read_response(response)
         self._application.emit(self._channel_name, self.status())
         

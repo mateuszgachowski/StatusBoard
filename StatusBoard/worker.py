@@ -76,6 +76,7 @@ class BaseWorker(object):
     
     @property
     def local_timezone(self):
+        """Returns a local timezone object."""
         if self._local_timezone is None:
             try:
                 self._local_timezone = pytz.timezone(time.tzname[0])

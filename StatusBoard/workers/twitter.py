@@ -12,12 +12,12 @@ import pytz
 DEFAULT_TIMEOUT = 600 # 10 minutes
 
 class TwitterWorker(StatusBoard.worker.ScheduledWorker):
-    """Twitter integration worker."""
     _default_interval = DEFAULT_TIMEOUT
     
     _base_url = 'http://api.twitter.com/1/statuses/user_timeline.json?screen_name='
         
     def _is_rate_limit_exceeded(self, response):
+        """Check if Twitter response contains info about rate being limited."""
         if response.code == 400:
             try:
                 assert response.headers['X-RateLimit-Remaining'] == "0"
@@ -29,6 +29,7 @@ class TwitterWorker(StatusBoard.worker.ScheduledWorker):
         return False
         
     def _throttled_timeout(self, response):
+        """Adjust worker interval to gracefully handle Twitter's rate limiting."""
         if response.code == 400:
             try:
                 reset_timestamp = int(response.headers['X-RateLimit-Reset'])
@@ -46,12 +47,15 @@ class TwitterWorker(StatusBoard.worker.ScheduledWorker):
                 return DEFAULT_TIMEOUT
         
     def _twitter_request(self):
+        """Return a URL for an Twitter request."""
         return self._base_url + self._options['username']
     
     def _parse_tweet(self, text):
+        """Parse Tweet text and format it."""
         return text
     
     def _read_response(self, response):
+        """Read Twitter's response and process it."""
         tweets = []
         
         try:
@@ -81,6 +85,7 @@ class TwitterWorker(StatusBoard.worker.ScheduledWorker):
         return tweets
         
     def _on_response(self, response):
+        """Handle async HTTP client response."""
         if self._is_rate_limit_exceeded(response) == True:
             logging.error('TwitterWorker: Rate limit exceeded. Tweaking timeout.')
             self._interval = self._throttled_timeout(response)
