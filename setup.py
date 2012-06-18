@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='StatusBoard',
-    version='2.0',
+    version='2.1',
     packages=find_packages(),
     package_data={
         'StatusBoard': [
@@ -14,12 +14,12 @@ setup(
         ]
     },
     install_requires=[
-        'tornado==2.1', 'sleekxmpp==1.0rc2'
+        'brukva==0.0.1', 'feedparser==5.1.2', 'tornado==2.1', 'sleekxmpp==1.0rc2',
+        'pytz==2012c'
     ],
     entry_points={
         'console_scripts': [
-            'status_board=StatusBoard.scripts.status_board:main',
-            'status_board_setup_db=StatusBoard.scripts.setup_db:main'
+            'status_board=StatusBoard.scripts.status_board:main'
         ]
     },
     zip_safe=False
